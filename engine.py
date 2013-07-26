@@ -24,12 +24,10 @@ from gi.repository import Pango
 
 keysyms = IBus
 
-import plover.app
-from plover.machine.base import StenotypeBase
 from plover.translation import Translator
 from plover.steno import Stroke
 from plover.formatting import Formatter
-import plover.dictionary
+from plover.dictionary.loading_manager import manager as DictionaryManager
 import plover.config
 
 import termios
@@ -67,29 +65,10 @@ KEYSTRING_TO_STENO_KEY = {
 }
 
 KEYCOMBO_TO_KEYSTRING = {
-    'Return': (0xff0d, 28),
+    'Return': '\n',
 }
 
 USE_DELETE_SURROUNDING_TEXT = True
-
-class Machine(StenotypeBase):
-
-    def __init__(self):
-        StenotypeBase.__init__(self)
-
-    def start_capture(self):
-        pass
-
-    def stop_capture(self):
-        pass
-
-    def suppress_keyboard(self, suppress):
-        pass
-
-    @staticmethod
-    def get_option_info():
-        bool_converter = lambda s: s == 'True'
-        return {}
 
 class Steno:
 
@@ -99,34 +78,16 @@ class Steno:
         self.config = plover.config.Config()
         with open(plover.config.CONFIG_FILE) as f:
             self.config.load(f)
-        self.dicts = plover.dictionary.loading_manager.manager.load(self.config.get_dictionary_file_names())
-        self.machine = Machine()
-        self.machine.add_stroke_callback(self.machine_callback)
-        self.engine = plover.app.StenoEngine()
-        self.engine.formatter.engine_command_callback = self.consume_command
-        self.engine.add_callback(self.update_status)
-        self.engine.set_is_running(True)
-        self.engine.set_machine(self.machine)
-        self.engine.get_dictionary().set_dicts(self.dicts)
+        self.dicts = DictionaryManager.load(self.config.get_dictionary_file_names())
         self.formatter = Formatter()
         self.formatter.set_output(self.output)
         self.translator = Translator()
         self.translator.add_listener(self.formatter.format)
-        self.translator.set_dictionary(self.engine.get_dictionary())
+        self.translator.get_dictionary().set_dicts(self.dicts)
 
     def stroke(self, keys):
-        self.machine._notify(keys)
-
-    def consume_command(self, command):
-        print 'consume_command(%s)' % command
-        pass
-
-    def update_status(self, state):
-        pass
-
-    def machine_callback(self, s):
-        stroke = Stroke(s)
-        self.translator.translate(stroke)
+        print 'stroke(%s)' % keys
+        self.translator.translate(Stroke(keys))
 
 class EnginePlover(IBus.Engine):
     __gtype_name__ = 'EnginePlover'
@@ -148,7 +109,6 @@ class EnginePlover(IBus.Engine):
 
     def send_key(self, keyval, keycode):
         self.forward_key_event(keyval, keycode, 0x0000)
-        # self.forward_key_event(keyval, keycode, 0x40000000)
 
     def send_backspaces(self, b):
         print 'send_backspaces(%u)' % b
@@ -164,12 +124,15 @@ class EnginePlover(IBus.Engine):
         self.commit_text(IBus.Text.new_from_string(t))
 
     def send_key_combination(self, c):
+        print 'send_key_combination(%sc)' % c
         key = KEYCOMBO_TO_KEYSTRING.get(c, None)
-        if key is not None:
+        if type(key) is str:
+            self.send_string(key)
+        elif key is not None:
             self.send_key(*key)
 
     def send_engine_command(self, c):
-        pass
+        print 'send_engine_command(%sc)' % c
 
     def do_process_key_event(self, keyval, keycode, state):
         print "process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state)
@@ -213,34 +176,9 @@ class EnginePlover(IBus.Engine):
             if steno_key in self._pressed:
                 self._pressed.remove(steno_key)
                 if 0 == len(self._pressed):
-                    print 'stroke:', self._keys
                     self._steno.stroke(list(self._keys))
                     self._keys.clear()
         return True
-
-    # def do_page_up(self):
-        # if self.__lookup_table.page_up():
-            # self.page_up_lookup_table()
-            # return True
-        # return False
-
-    # def do_page_down(self):
-        # if self.__lookup_table.page_down():
-            # self.page_down_lookup_table()
-            # return True
-        # return False
-
-    # def do_cursor_up(self):
-        # if self.__lookup_table.cursor_up():
-            # self.cursor_up_lookup_table()
-            # return True
-        # return False
-
-    # def do_cursor_down(self):
-        # if self.__lookup_table.cursor_down():
-            # self.cursor_down_lookup_table()
-            # return True
-        # return False
 
     def do_focus_in(self):
         print "focus_in"
@@ -251,7 +189,4 @@ class EnginePlover(IBus.Engine):
 
     def do_reset(self):
         print "reset"
-
-    # def do_property_activate(self, prop_name, extra):
-        # print "property_activate(%s, %s)" % (prop_name, extra)
 
