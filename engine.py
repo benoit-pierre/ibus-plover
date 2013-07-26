@@ -89,6 +89,9 @@ class Steno:
         print 'stroke(%s)' % keys
         self.translator.translate(Stroke(keys))
 
+    def reset(self):
+        self.translator.clear_state()
+
 class EnginePlover(IBus.Engine):
     __gtype_name__ = 'EnginePlover'
 
@@ -189,4 +192,5 @@ class EnginePlover(IBus.Engine):
 
     def do_reset(self):
         print "reset"
+        self._steno.reset()
 
