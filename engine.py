@@ -70,20 +70,58 @@ KEYCOMBO_TO_KEYSTRING = {
 
 USE_DELETE_SURROUNDING_TEXT = True
 
+NB_PREDIT_STROKES = 5
+
 class Steno:
 
-    def __init__(self, output):
+    def __init__(self):
 
-        self.output = output
         self.config = plover.config.Config()
         with open(plover.config.CONFIG_FILE) as f:
             self.config.load(f)
         self.dicts = DictionaryManager.load(self.config.get_dictionary_file_names())
         self.formatter = Formatter()
-        self.formatter.set_output(self.output)
+        self.formatter.set_output(self)
         self.translator = Translator()
         self.translator.add_listener(self.formatter.format)
         self.translator.get_dictionary().set_dicts(self.dicts)
+        self.translator.set_min_undo_length(NB_PREDIT_STROKES)
+        self.text_commit = None
+        self.text_preedit = []
+
+    def send_key(self, keyval, keycode):
+        self.forward_key_event(keyval, keycode, 0x0000)
+
+    def send_backspaces(self, b):
+        print 'send_backspaces(%u)' % b
+        while b > 0 and len(self.text_preedit) > 0:
+            t = self.text_preedit.pop()
+            l = len(t)
+            if l > b:
+                t = t[:-b]
+                self.text_preedit.append(t)
+            b -= l
+        self.text_commit = None
+
+    def send_string(self, t):
+        print 'send_string(%s)' % t
+        self.text_preedit.append(t)
+        if len(self.text_preedit) > NB_PREDIT_STROKES:
+            self.text_commit = self.text_preedit.pop(0)
+        else:
+            self.text_commit = None
+
+
+    def send_key_combination(self, c):
+        print 'send_key_combination(%sc)' % c
+        key = KEYCOMBO_TO_KEYSTRING.get(c, None)
+        if type(key) is str:
+            self.send_string(key)
+        elif key is not None:
+            self.send_key(*key)
+
+    def send_engine_command(self, c):
+        print 'send_engine_command(%sc)' % c
 
     def stroke(self, keys):
         print 'stroke(%s)' % keys
@@ -91,6 +129,8 @@ class Steno:
 
     def reset(self):
         self.translator.clear_state()
+        self.text_commit = None
+        self.text_preedit = []
 
 class EnginePlover(IBus.Engine):
     __gtype_name__ = 'EnginePlover'
@@ -104,38 +144,11 @@ class EnginePlover(IBus.Engine):
         self.__prop_list.append(IBus.Property(key="test", icon="ibus-local"))
         self._pressed = set()
         self._keys = set()
-        self._steno = Steno(self)
+        self._steno = Steno()
         self._mutted = False
         self._left_shift_pressed = False
         self._right_shift_pressed = False
         self._both_shift_pressed = False
-
-    def send_key(self, keyval, keycode):
-        self.forward_key_event(keyval, keycode, 0x0000)
-
-    def send_backspaces(self, b):
-        print 'send_backspaces(%u)' % b
-        if USE_DELETE_SURROUNDING_TEXT:
-            self.delete_surrounding_text(-b, b)
-        else:
-            for _ in xrange(b):
-                self.send_key(keysyms.BackSpace, 58)
-            time.sleep(0.2)
-
-    def send_string(self, t):
-        print 'send_string(%s)' % t
-        self.commit_text(IBus.Text.new_from_string(t))
-
-    def send_key_combination(self, c):
-        print 'send_key_combination(%sc)' % c
-        key = KEYCOMBO_TO_KEYSTRING.get(c, None)
-        if type(key) is str:
-            self.send_string(key)
-        elif key is not None:
-            self.send_key(*key)
-
-    def send_engine_command(self, c):
-        print 'send_engine_command(%sc)' % c
 
     def do_process_key_event(self, keyval, keycode, state):
         print "process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state)
@@ -160,6 +173,21 @@ class EnginePlover(IBus.Engine):
             self._mutted = not self._mutted
         if self._mutted:
             return False
+        if keysyms.Escape == keyval:
+            if 0 == len(self._steno.text_preedit):
+                return False
+            self._steno.reset()
+            self.hide_preedit_text()
+            return True
+        if keysyms.Return == keyval:
+            if 0 == len(self._steno.text_preedit):
+                # Nothing to commit...
+                return False
+            text = ''.join(self._steno.text_preedit)
+            self._steno.reset()
+            self.commit_text(IBus.Text.new_from_string(text))
+            self.hide_preedit_text()
+            return True
         if 0 != (state & ~(IBus.ModifierType.RELEASE_MASK |
                            IBus.ModifierType.SHIFT_MASK |
                            IBus.ModifierType.LOCK_MASK)):
@@ -181,6 +209,15 @@ class EnginePlover(IBus.Engine):
                 if 0 == len(self._pressed):
                     self._steno.stroke(list(self._keys))
                     self._keys.clear()
+                    if self._steno.text_commit is not None:
+                        text = self._steno.text_commit
+                        self.commit_text(IBus.Text.new_from_string(text))
+                    if len(self._steno.text_preedit) > 0:
+                        text = ''.join(self._steno.text_preedit)
+                        self.update_preedit_text(IBus.Text.new_from_string(text), 0, True)
+                    else:
+                        self.hide_preedit_text()
+            return True
         return True
 
     def do_focus_in(self):
