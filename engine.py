@@ -86,8 +86,8 @@ class Steno:
         self.translator.add_listener(self.formatter.format)
         self.translator.get_dictionary().set_dicts(self.dicts)
         self.translator.set_min_undo_length(NB_PREDIT_STROKES)
-        self.text_commit = None
         self.text_preedit = []
+        self.text_commit = None
 
     def send_key(self, keyval, keycode):
         self.forward_key_event(keyval, keycode, 0x0000)
@@ -101,15 +101,12 @@ class Steno:
                 t = t[:-b]
                 self.text_preedit.append(t)
             b -= l
-        self.text_commit = None
 
     def send_string(self, t):
         print 'send_string(%s)' % t
         self.text_preedit.append(t)
         if len(self.text_preedit) > NB_PREDIT_STROKES:
             self.text_commit = self.text_preedit.pop(0)
-        else:
-            self.text_commit = None
 
 
     def send_key_combination(self, c):
@@ -125,12 +122,14 @@ class Steno:
 
     def stroke(self, keys):
         print 'stroke(%s)' % keys
+        self.text_commit = None
         self.translator.translate(Stroke(keys))
+        return self.text_commit
 
     def reset(self):
         self.translator.clear_state()
-        self.text_commit = None
         self.text_preedit = []
+        self.text_commit = None
 
 class EnginePlover(IBus.Engine):
     __gtype_name__ = 'EnginePlover'
@@ -150,9 +149,31 @@ class EnginePlover(IBus.Engine):
         self._right_shift_pressed = False
         self._both_shift_pressed = False
 
+    def _commit_preedit(self):
+        text = ''.join(self._steno.text_preedit)
+        self._steno.reset()
+        self.commit_text(IBus.Text.new_from_string(text))
+        self.hide_preedit_text()
+
     def do_process_key_event(self, keyval, keycode, state):
         print "process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state)
-        if IBus.ModifierType.MOD5_MASK == state:
+        handled = self._process_key_event(keyval, keycode, state)
+        if handled:
+            print 'handled'
+        else:
+            print 'forwarded'
+        return handled
+
+    def _has_preddit(self):
+        return 0 != len(self._steno.text_preedit)
+
+    def _update_commit_preedit(self):
+        pass
+
+    def _process_key_event(self, keyval, keycode, state):
+
+        # Handle special key combo to enable/disable/toggle.
+        if IBus.ModifierType.HYPER_MASK == state:
             if keysyms.d == keyval:
                 print 'mutting'
                 self._mutted = True
@@ -163,42 +184,65 @@ class EnginePlover(IBus.Engine):
                 self._mutted = not self._mutted
                 print 'mutted:', self._mutted
             return True
+
+        # Handle both shift keys pressed to toggle combo.
         both_shift_pressed = self._both_shift_pressed
-        if 42 == keycode:
+        if keysyms.Shift_L == keyval:
             self._left_shift_pressed = 0 == (state & IBus.ModifierType.RELEASE_MASK)
-        if 54 == keycode:
+        if keysyms.Shift_R == keycode:
             self._right_shift_pressed = 0 == (state & IBus.ModifierType.RELEASE_MASK)
         self._both_shift_pressed = self._left_shift_pressed and self._right_shift_pressed
         if both_shift_pressed and not self._both_shift_pressed:
             self._mutted = not self._mutted
+
+        # Disabled?
         if self._mutted:
             return False
-        if keysyms.Escape == keyval:
-            if 0 == len(self._steno.text_preedit):
-                return False
-            self._steno.reset()
-            self.hide_preedit_text()
-            return True
-        if keysyms.Return == keyval:
-            if 0 == len(self._steno.text_preedit):
-                # Nothing to commit...
-                return False
-            text = ''.join(self._steno.text_preedit)
-            self._steno.reset()
-            self.commit_text(IBus.Text.new_from_string(text))
-            self.hide_preedit_text()
-            return True
+
+        # Let the application handle keys with modifiers (other than shifted).
         if 0 != (state & ~(IBus.ModifierType.RELEASE_MASK |
                            IBus.ModifierType.SHIFT_MASK |
                            IBus.ModifierType.LOCK_MASK)):
             return False
+
+        # Escape will cancel preedit if any, or else be forwarded.
+        if keysyms.Escape == keyval:
+            if self._has_preddit():
+                self._steno.reset()
+                self.hide_preedit_text()
+                return True
+            return False
+
+        # Space will commit preedit if any, or else be forwarded.
+        if keysyms.space == keyval:
+            if self._has_preddit():
+                self._commit_preedit()
+                return True
+            return False
+
+        # BackSpace is forwarded if no preedit.
+        if keysyms.BackSpace == keyval:
+            if self._has_preddit():
+                # TODO: convert to the right stroke?
+                return True
+            return False
+
+        # Return/Tab trigger a commit before being forwarded.
+        if keyval in (keysyms.Return, keysyms.Tab):
+            if 0 != len(self._steno.text_preedit):
+                self._commit_preedit()
+            return False
+
         steno_key = KEYSTRING_TO_STENO_KEY.get(keycode, None)
         if steno_key is None:
+            if self._has_preddit():
+                return True
             if keycode in xrange(16, 28) or \
                keycode in xrange(30, 41) or \
                keycode in xrange(44, 54):
                 return True
             return False
+
         is_press = 0 == (state & IBus.ModifierType.RELEASE_MASK)
         if is_press:
             self._keys.add(steno_key)
@@ -207,17 +251,16 @@ class EnginePlover(IBus.Engine):
             if steno_key in self._pressed:
                 self._pressed.remove(steno_key)
                 if 0 == len(self._pressed):
-                    self._steno.stroke(list(self._keys))
+                    text = self._steno.stroke(list(self._keys))
                     self._keys.clear()
-                    if self._steno.text_commit is not None:
-                        text = self._steno.text_commit
+                    if text is not None:
                         self.commit_text(IBus.Text.new_from_string(text))
                     if len(self._steno.text_preedit) > 0:
                         text = ''.join(self._steno.text_preedit)
                         self.update_preedit_text(IBus.Text.new_from_string(text), 0, True)
                     else:
                         self.hide_preedit_text()
-            return True
+
         return True
 
     def do_focus_in(self):
