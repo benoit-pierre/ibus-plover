@@ -144,7 +144,7 @@ class EnginePlover(IBus.Engine):
         self._pressed = set()
         self._keys = set()
         self._steno = Steno()
-        self._mutted = False
+        self._muted = False
         self._left_shift_pressed = False
         self._right_shift_pressed = False
         self._both_shift_pressed = False
@@ -170,33 +170,46 @@ class EnginePlover(IBus.Engine):
     def _update_commit_preedit(self):
         pass
 
+    def _mute(self):
+        print 'muting'
+        if self._has_preddit():
+            self._commit_preedit()
+        self._muted = True
+
+    def _unmute(self):
+        print 'unmuting'
+        self._muted = False
+
+    def _toggle_mute(self):
+        if self._muted:
+            self._unmute()
+        else:
+            self._mute()
+
     def _process_key_event(self, keyval, keycode, state):
 
         # Handle special key combo to enable/disable/toggle.
         if IBus.ModifierType.HYPER_MASK == state:
             if keysyms.d == keyval:
-                print 'mutting'
-                self._mutted = True
+                self._mute()
             elif keysyms.e == keyval:
-                print 'unmutting'
-                self._mutted = False
+                self._unmute()
             elif keysyms.t == keyval:
-                self._mutted = not self._mutted
-                print 'mutted:', self._mutted
+                self._toggle_mute()
             return True
 
-        # Handle both shift keys pressed to toggle combo.
+        # Handle both shift keys pressed combo to toggle mute.
         both_shift_pressed = self._both_shift_pressed
         if keysyms.Shift_L == keyval:
             self._left_shift_pressed = 0 == (state & IBus.ModifierType.RELEASE_MASK)
-        if keysyms.Shift_R == keycode:
+        if keysyms.Shift_R == keyval:
             self._right_shift_pressed = 0 == (state & IBus.ModifierType.RELEASE_MASK)
         self._both_shift_pressed = self._left_shift_pressed and self._right_shift_pressed
         if both_shift_pressed and not self._both_shift_pressed:
-            self._mutted = not self._mutted
+            self._toggle_mute()
 
         # Disabled?
-        if self._mutted:
+        if self._muted:
             return False
 
         # Let the application handle keys with modifiers (other than shifted).
