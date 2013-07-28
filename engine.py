@@ -1,4 +1,4 @@
-# vim:set et sts=4 sw=4:
+# vim:set et sts=4 sw=4 fileencoding=utf-8 :
 #
 # ibus-plover - Plover support for Input Bus
 #
@@ -149,12 +149,6 @@ class EnginePlover(IBus.Engine):
         self._right_shift_pressed = False
         self._both_shift_pressed = False
 
-    def _commit_preedit(self):
-        text = ''.join(self._steno.text_preedit)
-        self._steno.reset()
-        self.commit_text(IBus.Text.new_from_string(text))
-        self.hide_preedit_text()
-
     def do_process_key_event(self, keyval, keycode, state):
         print "process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state)
         handled = self._process_key_event(keyval, keycode, state)
@@ -164,15 +158,29 @@ class EnginePlover(IBus.Engine):
             print 'forwarded'
         return handled
 
-    def _has_preddit(self):
+    def _has_preedit(self):
         return 0 != len(self._steno.text_preedit)
 
-    def _update_commit_preedit(self):
-        pass
+    def _hide_preedit(self):
+        self.hide_preedit_text()
+
+    def _show_preedit(self):
+        text = u''.join(self._steno.text_preedit)
+        text = text.replace('\n', u'␍')
+        if ' ' == text[-1]:
+            text = text[:-1] + u'␠'
+        self.update_preedit_text(IBus.Text.new_from_string(text), 0, True)
+        print 'updating preedit text: %s' % text
+
+    def _commit_preedit(self):
+        text = ''.join(self._steno.text_preedit)
+        self._steno.reset()
+        self.commit_text(IBus.Text.new_from_string(text))
+        self.hide_preedit_text()
 
     def _mute(self):
         print 'muting'
-        if self._has_preddit():
+        if self._has_preedit():
             self._commit_preedit()
         self._muted = True
 
@@ -220,7 +228,7 @@ class EnginePlover(IBus.Engine):
 
         # Escape will cancel preedit if any, or else be forwarded.
         if keysyms.Escape == keyval:
-            if self._has_preddit():
+            if self._has_preedit():
                 self._steno.reset()
                 self.hide_preedit_text()
                 return True
@@ -228,14 +236,14 @@ class EnginePlover(IBus.Engine):
 
         # Space will commit preedit if any, or else be forwarded.
         if keysyms.space == keyval:
-            if self._has_preddit():
+            if self._has_preedit():
                 self._commit_preedit()
                 return True
             return False
 
         # BackSpace is forwarded if no preedit.
         if keysyms.BackSpace == keyval:
-            if self._has_preddit():
+            if self._has_preedit():
                 # TODO: convert to the right stroke?
                 return True
             return False
@@ -248,7 +256,7 @@ class EnginePlover(IBus.Engine):
 
         steno_key = KEYSTRING_TO_STENO_KEY.get(keycode, None)
         if steno_key is None:
-            if self._has_preddit():
+            if self._has_preedit():
                 return True
             if keycode in xrange(16, 28) or \
                keycode in xrange(30, 41) or \
@@ -268,17 +276,18 @@ class EnginePlover(IBus.Engine):
                     self._keys.clear()
                     if text is not None:
                         self.commit_text(IBus.Text.new_from_string(text))
-                    if len(self._steno.text_preedit) > 0:
-                        text = ''.join(self._steno.text_preedit)
-                        self.update_preedit_text(IBus.Text.new_from_string(text), 0, True)
+                    if self._has_preedit():
+                        self._show_preedit()
                     else:
-                        self.hide_preedit_text()
+                        self._hide_preedit()
 
         return True
 
     def do_focus_in(self):
         print "focus_in"
         self.register_properties(self.__prop_list)
+        if self._has_preedit():
+            self._show_preedit()
 
     def do_focus_out(self):
         print "focus_out"
