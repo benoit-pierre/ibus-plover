@@ -30,6 +30,8 @@ from plover.formatting import Formatter
 from plover.dictionary.loading_manager import manager as DictionaryManager
 import plover.config
 
+import logging
+
 KEYSTRING_TO_STENO_KEY = {
     16: "S-",
     17: "T-",
@@ -67,7 +69,7 @@ NB_PREDIT_STROKES = 10
 
 class Steno:
 
-    def __init__(self):
+    def __init__(self, log):
 
         self.config = plover.config.Config()
         with open(plover.config.CONFIG_FILE) as f:
@@ -81,12 +83,13 @@ class Steno:
         self.translator.set_min_undo_length(NB_PREDIT_STROKES)
         self.text_preedit = []
         self.text_commit = None
+        self._log = log
 
     def send_key(self, keyval, keycode):
         self.forward_key_event(keyval, keycode, 0x0000)
 
     def send_backspaces(self, b):
-        print 'send_backspaces(%u)' % b
+        self._log.debug('send_backspaces(%u)' % b)
         while b > 0 and len(self.text_preedit) > 0:
             t = self.text_preedit.pop()
             l = len(t)
@@ -96,14 +99,14 @@ class Steno:
             b -= l
 
     def send_string(self, t):
-        print 'send_string(%s)' % t
+        self._log.debug('send_string(%s)' % t)
         self.text_preedit.append(t)
         if len(self.text_preedit) > NB_PREDIT_STROKES:
             self.text_commit = self.text_preedit.pop(0)
 
 
     def send_key_combination(self, c):
-        print 'send_key_combination(%sc)' % c
+        self._log.debug('send_key_combination(%sc)' % c)
         key = KEYCOMBO_TO_KEYSTRING.get(c, None)
         if type(key) is str:
             self.send_string(key)
@@ -111,10 +114,10 @@ class Steno:
             self.send_key(*key)
 
     def send_engine_command(self, c):
-        print 'send_engine_command(%sc)' % c
+        self._log.debug('send_engine_command(%sc)' % c)
 
     def stroke(self, keys):
-        print 'stroke(%s)' % keys
+        self._log.debug('stroke(%s)' % keys)
         self.text_commit = None
         self.translator.translate(Stroke(keys))
         return self.text_commit
@@ -134,21 +137,22 @@ class EnginePlover(IBus.Engine):
         self.__lookup_table = IBus.LookupTable.new(10, 0, True, True)
         self.__prop_list = IBus.PropList()
         self.__prop_list.append(IBus.Property(key="test", icon="ibus-local"))
+        self._log = logging.getLogger('ibus.plover')
         self._pressed = set()
         self._keys = set()
-        self._steno = Steno()
+        self._steno = Steno(self._log)
         self._muted = False
         self._left_shift_pressed = False
         self._right_shift_pressed = False
         self._both_shift_pressed = False
 
     def do_process_key_event(self, keyval, keycode, state):
-        print "process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state)
+        self._log.debug("process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state))
         handled = self._process_key_event(keyval, keycode, state)
         if handled:
-            print 'handled'
+            self._log.debug('handled')
         else:
-            print 'forwarded'
+            self._log.debug('forwarded')
         return handled
 
     def _has_preedit(self):
@@ -163,7 +167,7 @@ class EnginePlover(IBus.Engine):
         if ' ' == text[-1]:
             text = text[:-1] + u'␠'
         self.update_preedit_text(IBus.Text.new_from_string(text), 0, True)
-        print 'updating preedit text: %s' % text
+        self._log.debug('updating preedit text: %s' % text)
 
     def _commit_preedit(self):
         text = ''.join(self._steno.text_preedit)
@@ -172,13 +176,13 @@ class EnginePlover(IBus.Engine):
         self.hide_preedit_text()
 
     def _mute(self):
-        print 'muting'
+        self._log.debug('muting')
         if self._has_preedit():
             self._commit_preedit()
         self._muted = True
 
     def _unmute(self):
-        print 'unmuting'
+        self._log.debug('unmuting')
         self._muted = False
 
     def _toggle_mute(self):
@@ -277,15 +281,15 @@ class EnginePlover(IBus.Engine):
         return True
 
     def do_focus_in(self):
-        print "focus_in"
+        self._log.debug("focus_in")
         self.register_properties(self.__prop_list)
         if self._has_preedit():
             self._show_preedit()
 
     def do_focus_out(self):
-        print "focus_out"
+        self._log.debug("focus_out")
 
     def do_reset(self):
-        print "reset"
+        self._log.debug("reset")
         self._steno.reset()
 

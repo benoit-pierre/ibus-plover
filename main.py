@@ -26,6 +26,7 @@ import os
 import sys
 import getopt
 import locale
+import logging
 
 from engine import EnginePlover
 
@@ -110,6 +111,10 @@ def main():
     if daemonize:
         if os.fork():
             sys.exit()
+
+    logging.basicConfig()
+    if not exec_by_ibus and not daemonize:
+        logging.getLogger('ibus.plover').setLevel(logging.DEBUG)
 
     launch_engine(exec_by_ibus)
 
