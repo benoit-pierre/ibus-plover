@@ -30,11 +30,6 @@ from plover.formatting import Formatter
 from plover.dictionary.loading_manager import manager as DictionaryManager
 import plover.config
 
-import termios
-import time
-import tty
-import sys
-
 KEYSTRING_TO_STENO_KEY = {
     16: "S-",
     17: "T-",
@@ -67,8 +62,6 @@ KEYSTRING_TO_STENO_KEY = {
 KEYCOMBO_TO_KEYSTRING = {
     'Return': '\n',
 }
-
-USE_DELETE_SURROUNDING_TEXT = True
 
 NB_PREDIT_STROKES = 10
 
