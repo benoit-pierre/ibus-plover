@@ -24,9 +24,9 @@ from gi.repository import Pango
 
 keysyms = IBus
 
-from plover.translation import Translator
+from plover.translation import _State, Translation, Translator
 from plover.steno import Stroke
-from plover.formatting import Formatter
+from plover.formatting import _Action, Formatter
 from plover.dictionary.loading_manager import manager as DictionaryManager
 import plover.config
 
@@ -81,9 +81,8 @@ class Steno:
         self.translator.add_listener(self.formatter.format)
         self.translator.get_dictionary().set_dicts(self.dicts)
         self.translator.set_min_undo_length(NB_PREDIT_STROKES)
-        self.text_preedit = []
-        self.text_commit = None
         self._log = log
+        self.reset(full=True)
 
     def send_key(self, keyval, keycode):
         self.forward_key_event(keyval, keycode, 0x0000)
@@ -122,8 +121,13 @@ class Steno:
         self.translator.translate(Stroke(keys))
         return self.text_commit
 
-    def reset(self):
-        self.translator.clear_state()
+    def reset(self, full=False):
+        state = _State()
+        state.tail = self.translator.get_state().last()
+        if full or state.tail is None:
+            state.tail = Translation([Stroke('*')], None)
+            state.tail.formatting = [_Action(attach=True)]
+        self.translator.set_state(state)
         self.text_preedit = []
         self.text_commit = None
 
@@ -291,5 +295,5 @@ class EnginePlover(IBus.Engine):
 
     def do_reset(self):
         self._log.debug("reset")
-        self._steno.reset()
+        self._steno.reset(full=True)
 
