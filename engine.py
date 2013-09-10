@@ -131,12 +131,22 @@ class Steno:
         self.text_preedit = []
         self.text_commit = None
 
+class Log:
+
+    def __init__(self, instance):
+        self._log = logging.getLogger('ibus.plover')
+        self._id = id(instance)
+
+    def debug(self, s):
+        self._log.debug('%x:%s' % (self._id, s))
+
 class EnginePlover(IBus.Engine):
     __gtype_name__ = 'EnginePlover'
 
     def __init__(self):
         super(EnginePlover, self).__init__()
-        self._log = logging.getLogger('ibus.plover')
+        self._log = Log(self)
+        self._log.debug('__init__')
         self._pressed = set()
         self._keys = set()
         self._steno = Steno(self._log)

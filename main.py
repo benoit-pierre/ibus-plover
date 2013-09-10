@@ -112,9 +112,11 @@ def main():
         if os.fork():
             sys.exit()
 
-    logging.basicConfig()
     if not exec_by_ibus and not daemonize:
+        logging.basicConfig()
         logging.getLogger('ibus.plover').setLevel(logging.DEBUG)
+    else:
+        logging.basicConfig(filename='/tmp/ibus-plover.log', level=logging.DEBUG)
 
     launch_engine(exec_by_ibus)
 
