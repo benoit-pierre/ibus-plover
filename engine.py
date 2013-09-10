@@ -18,9 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from gi.repository import IBus
 
-keysyms = IBus
+from gi.repository import IBus
 
 from plover.translation import _State, Translation, Translator
 from plover.steno import Stroke
@@ -29,6 +28,7 @@ from plover.dictionary.loading_manager import manager as DictionaryManager
 import plover.config
 
 import logging
+
 
 KEYSTRING_TO_STENO_KEY = {
     16: "S-",
@@ -65,20 +65,31 @@ KEYCOMBO_TO_KEYSTRING = {
 
 NB_PREDIT_STROKES = 10
 
+
+class Log:
+
+    def __init__(self, instance):
+        self._log = logging.getLogger('ibus.plover')
+        self._id = id(instance)
+
+    def debug(self, s):
+        self._log.debug('%x:%s' % (self._id, s))
+
+
 class Steno:
 
     def __init__(self, log):
 
-        self.config = plover.config.Config()
+        self._config = plover.config.Config()
         with open(plover.config.CONFIG_FILE) as f:
-            self.config.load(f)
-        self.dicts = DictionaryManager.load(self.config.get_dictionary_file_names())
-        self.formatter = Formatter()
-        self.formatter.set_output(self)
-        self.translator = Translator()
-        self.translator.add_listener(self.formatter.format)
-        self.translator.get_dictionary().set_dicts(self.dicts)
-        self.translator.set_min_undo_length(NB_PREDIT_STROKES)
+            self._config.load(f)
+        self._dicts = DictionaryManager.load(self._config.get_dictionary_file_names())
+        self._formatter = Formatter()
+        self._formatter.set_output(self)
+        self._translator = Translator()
+        self._translator.add_listener(self._formatter.format)
+        self._translator.get_dictionary().set_dicts(self._dicts)
+        self._translator.set_min_undo_length(NB_PREDIT_STROKES)
         self._log = log
         self.reset(full=True)
 
@@ -116,27 +127,19 @@ class Steno:
     def stroke(self, keys):
         self._log.debug('stroke(%s)' % keys)
         self.text_commit = None
-        self.translator.translate(Stroke(keys))
+        self._translator.translate(Stroke(keys))
         return self.text_commit
 
     def reset(self, full=False):
         state = _State()
-        state.tail = self.translator.get_state().last()
+        state.tail = self._translator.get_state().last()
         if full or state.tail is None:
             state.tail = Translation([Stroke('*')], None)
             state.tail.formatting = [_Action(attach=True)]
-        self.translator.set_state(state)
+        self._translator.set_state(state)
         self.text_preedit = []
         self.text_commit = None
 
-class Log:
-
-    def __init__(self, instance):
-        self._log = logging.getLogger('ibus.plover')
-        self._id = id(instance)
-
-    def debug(self, s):
-        self._log.debug('%x:%s' % (self._id, s))
 
 class EnginePlover(IBus.Engine):
     __gtype_name__ = 'EnginePlover'
@@ -204,19 +207,19 @@ class EnginePlover(IBus.Engine):
 
         # Handle special key combo to enable/disable/toggle.
         if IBus.ModifierType.HYPER_MASK == state:
-            if keysyms.d == keyval:
+            if IBus.d == keyval:
                 self._mute()
-            elif keysyms.e == keyval:
+            elif IBus.e == keyval:
                 self._unmute()
-            elif keysyms.t == keyval:
+            elif IBus.t == keyval:
                 self._toggle_mute()
             return True
 
         # Handle both shift keys pressed combo to toggle mute.
         both_shift_pressed = self._both_shift_pressed
-        if keysyms.Shift_L == keyval:
+        if IBus.Shift_L == keyval:
             self._left_shift_pressed = is_press
-        if keysyms.Shift_R == keyval:
+        if IBus.Shift_R == keyval:
             self._right_shift_pressed = is_press
         self._both_shift_pressed = self._left_shift_pressed and self._right_shift_pressed
         if both_shift_pressed and not self._both_shift_pressed:
@@ -233,7 +236,7 @@ class EnginePlover(IBus.Engine):
             return False
 
         # Escape will cancel preedit if any, or else be forwarded.
-        if keysyms.Escape == keyval:
+        if IBus.Escape == keyval:
             if self._has_preedit():
                 self._steno.reset()
                 self.hide_preedit_text()
@@ -241,21 +244,21 @@ class EnginePlover(IBus.Engine):
             return False
 
         # Space will commit preedit if any, or else be forwarded.
-        if keysyms.space == keyval:
+        if IBus.space == keyval:
             if self._has_preedit():
                 self._commit_preedit()
                 return True
             return False
 
         # BackSpace is forwarded if no preedit.
-        if keysyms.BackSpace == keyval:
+        if IBus.BackSpace == keyval:
             if self._has_preedit():
                 # TODO: convert to the right stroke?
                 return True
             return False
 
         # Return/Tab trigger a commit before being forwarded.
-        if keyval in (keysyms.Return, keysyms.Tab):
+        if keyval in (IBus.Return, IBus.Tab):
             if 0 != len(self._steno.text_preedit):
                 self._commit_preedit()
             return False
