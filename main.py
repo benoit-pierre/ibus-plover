@@ -61,7 +61,6 @@ class IMApp:
             self.__bus.request_name("org.freedesktop.IBus.Plover", 0)
         else:
             self.__bus.register_component(self.__component)
-            self.__bus.set_global_engine_async("plover", -1, None, None, None)
 
     def run(self):
         self.__mainloop.run()
