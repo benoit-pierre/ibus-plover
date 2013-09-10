@@ -136,11 +136,6 @@ class EnginePlover(IBus.Engine):
 
     def __init__(self):
         super(EnginePlover, self).__init__()
-        self.__is_invalidate = False
-        self.__preedit_string = u""
-        self.__lookup_table = IBus.LookupTable.new(10, 0, True, True)
-        self.__prop_list = IBus.PropList()
-        self.__prop_list.append(IBus.Property(key="test", icon="ibus-local"))
         self._log = logging.getLogger('ibus.plover')
         self._pressed = set()
         self._keys = set()
@@ -286,7 +281,6 @@ class EnginePlover(IBus.Engine):
 
     def do_focus_in(self):
         self._log.debug("focus_in")
-        self.register_properties(self.__prop_list)
         if self._has_preedit():
             self._show_preedit()
 
