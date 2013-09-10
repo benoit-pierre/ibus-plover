@@ -18,9 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-from gi.repository import GLib
 from gi.repository import IBus
-from gi.repository import Pango
 
 keysyms = IBus
 
@@ -202,6 +200,8 @@ class EnginePlover(IBus.Engine):
 
     def _process_key_event(self, keyval, keycode, state):
 
+        is_press = 0 == (state & IBus.ModifierType.RELEASE_MASK)
+
         # Handle special key combo to enable/disable/toggle.
         if IBus.ModifierType.HYPER_MASK == state:
             if keysyms.d == keyval:
@@ -215,9 +215,9 @@ class EnginePlover(IBus.Engine):
         # Handle both shift keys pressed combo to toggle mute.
         both_shift_pressed = self._both_shift_pressed
         if keysyms.Shift_L == keyval:
-            self._left_shift_pressed = 0 == (state & IBus.ModifierType.RELEASE_MASK)
+            self._left_shift_pressed = is_press
         if keysyms.Shift_R == keyval:
-            self._right_shift_pressed = 0 == (state & IBus.ModifierType.RELEASE_MASK)
+            self._right_shift_pressed = is_press
         self._both_shift_pressed = self._left_shift_pressed and self._right_shift_pressed
         if both_shift_pressed and not self._both_shift_pressed:
             self._toggle_mute()
@@ -270,7 +270,6 @@ class EnginePlover(IBus.Engine):
                 return True
             return False
 
-        is_press = 0 == (state & IBus.ModifierType.RELEASE_MASK)
         if is_press:
             self._keys.add(steno_key)
             self._pressed.add(steno_key)
