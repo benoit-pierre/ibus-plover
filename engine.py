@@ -98,10 +98,10 @@ class Steno:
         self._output.flush()
         self.reset()
 
-    def stroke(self, keys):
-        self._log.debug('stroke(%s)' % keys)
+    def stroke(self, stroke):
+        self._log.debug('stroke(%s)' % stroke.rtfcre)
         self._output.stroke_start()
-        self._translator.translate(Stroke(keys))
+        self._translator.translate(stroke)
         self._output.stroke_end()
 
     def reset(self, full=False):
@@ -244,6 +244,14 @@ class EnginePlover(IBus.Engine):
     def _has_preedit(self):
         return self._preedit is not None
 
+    def _show_stroke(self):
+        stroke = Stroke(list(self._keys))
+        text = stroke.rtfcre
+        if self._has_preedit():
+            text = self._preedit + ' ' + text
+        text = IBus.Text.new_from_string(text)
+        self.update_preedit_text(text, 0, True)
+
     def _mute(self):
         self._log.debug('muting')
         self._steno.flush()
@@ -331,11 +339,13 @@ class EnginePlover(IBus.Engine):
         if is_press:
             self._keys.add(steno_key)
             self._pressed.add(steno_key)
+            self._show_stroke()
         else:
             if steno_key in self._pressed:
                 self._pressed.remove(steno_key)
                 if 0 == len(self._pressed):
-                    self._steno.stroke(list(self._keys))
+                    stroke = Stroke(list(self._keys))
+                    self._steno.stroke(stroke)
                     self._keys.clear()
 
         return True
