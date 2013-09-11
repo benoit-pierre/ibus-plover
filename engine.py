@@ -122,6 +122,7 @@ class Output:
         self._engine = engine
         self._text_preedit = []
         self._text_commit = None
+        self._immediate_mode = False
 
     def _has_preedit(self):
         return 0 != len(self._text_preedit)
@@ -158,21 +159,34 @@ class Output:
         else:
             self._hide_preedit()
 
+    def set_immediate_mode(self, enable=True):
+        if self._immediate_mode == enable:
+            return
+        self._immediate_mode = enable
+        if self._immediate_mode:
+            self.flush()
+
     def send_key(self, keyval, keycode):
         self._engine.forward_key_event(keyval, keycode, 0x0000)
 
-    def send_backspaces(self, b):
-        self._log.debug('send_backspaces(%u)' % b)
-        while b > 0 and len(self._text_preedit) > 0:
-            t = self._text_preedit.pop()
-            l = len(t)
-            if l > b:
-                t = t[:-b]
-                self._text_preedit.append(t)
-            b -= l
+    def send_backspaces(self, num):
+        self._log.debug('send_backspaces(%u)' % num)
+        if self._immediate_mode:
+            self._engine.text_delete(num)
+            return
+        while num > 0 and len(self._text_preedit) > 0:
+            text = self._text_preedit.pop()
+            text_len = len(text)
+            if text_len > num:
+                text = text[:-num]
+                self._text_preedit.append(text)
+            num -= text_len
 
     def send_string(self, t):
         self._log.debug('send_string(%s)' % t)
+        if self._immediate_mode:
+            self._engine.text_commit(t)
+            return
         self._text_preedit.append(t)
         if len(self._text_preedit) > NB_PREDIT_STROKES:
             self._text_commit = self._text_preedit.pop(0)
@@ -210,6 +224,8 @@ class EnginePlover(IBus.Engine):
         self._left_shift_pressed = False
         self._right_shift_pressed = False
         self._both_shift_pressed = False
+        self._support_surrounding_text = False
+        self._immediate_mode = False
         self._preedit = None
 
     def do_process_key_event(self, keyval, keycode, state):
@@ -233,6 +249,9 @@ class EnginePlover(IBus.Engine):
         else:
             text = IBus.Text.new_from_string(text)
             self.update_preedit_text(text, 0, True)
+
+    def text_delete(self, num):
+        self.delete_surrounding_text(-num, num)
 
     def _has_preedit(self):
         return self._preedit is not None
@@ -259,6 +278,14 @@ class EnginePlover(IBus.Engine):
             self._unmute()
         else:
             self._mute()
+
+    def _set_immediate_mode(self, enable=True):
+        if self._immediate_mode == enable:
+            return
+        self._log.debug('immediate mode %s' % enable)
+        self._immediate_mode = enable
+        self._output.set_immediate_mode(self._immediate_mode)
+        self._steno.reset()
 
     def _stroke_started(self):
         """ Return True if a stroke is in progress. """
@@ -298,26 +325,36 @@ class EnginePlover(IBus.Engine):
             if 0 != (state & ~(IBus.ModifierType.RELEASE_MASK |
                                IBus.ModifierType.SHIFT_MASK |
                                IBus.ModifierType.LOCK_MASK)):
+
+                # Ctrl+Tab immediate mode (if supported).
+                if self._support_surrounding_text and IBus.Tab == keyval and \
+                   0 != (IBus.ModifierType.CONTROL_MASK & state):
+                    if not is_press:
+                        self._set_immediate_mode(not self._immediate_mode)
+                    return True
+
                 return False
 
-            # Space will commit preedit if any, or else be forwarded.
-            if IBus.space == keyval:
-                if self._has_preedit():
+            if not self._immediate_mode:
+
+                # Space will commit preedit if any, or else be forwarded.
+                if IBus.space == keyval:
+                    if self._has_preedit():
+                        self._steno.flush()
+                        return True
+                    return False
+
+                # BackSpace is forwarded if no preedit.
+                if IBus.BackSpace == keyval:
+                    if self._has_preedit():
+                        # TODO: convert to the right stroke?
+                        return True
+                    return False
+
+                # Escape/Return/Tab trigger a commit before being forwarded.
+                if keyval in (IBus.Escape, IBus.Return, IBus.Tab):
                     self._steno.flush()
-                    return True
-                return False
-
-            # BackSpace is forwarded if no preedit.
-            if IBus.BackSpace == keyval:
-                if self._has_preedit():
-                    # TODO: convert to the right stroke?
-                    return True
-                return False
-
-            # Escape/Return/Tab trigger a commit before being forwarded.
-            if keyval in (IBus.Escape, IBus.Return, IBus.Tab):
-                self._steno.flush()
-                return False
+                    return False
 
         steno_key = KEYSTRING_TO_STENO_KEY.get(keycode, None)
         if steno_key is None:
@@ -352,4 +389,8 @@ class EnginePlover(IBus.Engine):
     def do_reset(self):
         self._log.debug("reset")
         self._steno.reset(full=True)
+
+    def do_set_capabilities(self, caps):
+        self._log.debug("set_capabilities(%x)" % caps)
+        self._support_surrounding_text = caps & IBus.Capabilite.SURROUNDING_TEXT
 
