@@ -142,13 +142,6 @@ class Output:
         self._text_preedit = []
         self._engine.text_commit(text)
 
-    def enable(self):
-        if self._has_preedit():
-            self._show_preedit()
-
-    def disable(self):
-        self._hide_preedit()
-
     def flush(self):
         if self._has_preedit():
             self._commit_preedit()
@@ -352,11 +345,9 @@ class EnginePlover(IBus.Engine):
 
     def do_focus_in(self):
         self._log.debug("focus_in")
-        self._output.enable()
 
     def do_focus_out(self):
         self._log.debug("focus_out")
-        self._output.disable()
 
     def do_reset(self):
         self._log.debug("reset")
