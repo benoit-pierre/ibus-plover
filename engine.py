@@ -29,6 +29,34 @@ import plover.config
 
 import logging
 
+KEYSTRING_TO_STENO_KEY_ALT = {
+    60: "S-",
+    61: "T-",
+    62: "P-",
+    63: "H-",
+    64: "*",
+    65: "*",
+    66: "-F",
+    67: "-P",
+    68: "-L",
+    87: "-T",
+    88: "-D",
+    3: "S-",
+    4: "K-",
+    5: "W-",
+    6: "R-",
+    7: "*",
+    8: "*",
+    9: "-R",
+    10: "-B",
+    11: "-G",
+    12: "-S",
+    13: "-Z",
+    19: "A-",
+    20: "O-",
+    22: "-E",
+    23: "-U",
+}
 
 KEYSTRING_TO_STENO_KEY = {
     16: "S-",
@@ -227,6 +255,7 @@ class EnginePlover(IBus.Engine):
         self._support_surrounding_text = False
         self._immediate_mode = False
         self._preedit = None
+        self._use_alt_mapping = False
 
     def do_process_key_event(self, keyval, keycode, state):
         self._log.debug("process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state))
@@ -356,7 +385,11 @@ class EnginePlover(IBus.Engine):
                     self._steno.flush()
                     return False
 
-        steno_key = KEYSTRING_TO_STENO_KEY.get(keycode, None)
+        if self._use_alt_mapping:
+            mapping = KEYSTRING_TO_STENO_KEY_ALT
+        else:
+            mapping = KEYSTRING_TO_STENO_KEY
+        steno_key = mapping.get(keycode, None)
         if steno_key is None:
             if self._stroke_started() or self._has_preedit():
                 return True
