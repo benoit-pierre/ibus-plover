@@ -256,6 +256,7 @@ class EnginePlover(IBus.Engine):
         self._immediate_mode = False
         self._preedit = None
         self._use_alt_mapping = False
+        self._show_strokes = False
 
     def do_process_key_event(self, keyval, keycode, state):
         self._log.debug("process_key_event(0x%04x, %u, %04x)" % (keyval, keycode, state))
@@ -402,7 +403,8 @@ class EnginePlover(IBus.Engine):
         if is_press:
             self._keys.add(steno_key)
             self._pressed.add(steno_key)
-            self._show_stroke()
+            if self._show_strokes:
+                self._show_stroke()
         else:
             if steno_key in self._pressed:
                 self._pressed.remove(steno_key)
