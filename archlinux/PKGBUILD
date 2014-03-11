@@ -1,0 +1,18 @@
+# Maintainer: Benoit Pierre <benoit.pierr@gmail.com>
+
+pkgname=ibus-plover
+pkgver=
+pkgrel=1
+pkgdesc='Plover engine for IBus'
+arch=('any')
+license=('GPL')
+depends=('ibus')
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  mkdir -p ${pkgdir}/usr/share/ibus/component
+  install -m644 -t ${pkgdir}/usr/share/ibus/component plover.xml
+  mkdir -p ${pkgdir}/usr/share/ibus-plover
+  install -m644 -t ${pkgdir}/usr/share/ibus-plover engine.py ibus-plover.png main.py
+  install -m755 -t ${pkgdir}/usr/share/ibus-plover ibus-engine-plover
+}
