@@ -6,7 +6,7 @@ pkgrel=1
 pkgdesc='Plover engine for IBus'
 arch=('any')
 license=('GPL')
-depends=('ibus')
+depends=('ibus' 'python2-gobject')
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
