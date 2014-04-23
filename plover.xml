@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- filename: plover.xml -->
 <component>
-	<name>org.freedesktop.IBus.Plover</name>
-	<description>Plover Component</description>
-	<exec>/usr/share/ibus-plover/ibus-engine-plover --ibus</exec>
-	<version>1.2.99.20130703</version>
-	<author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
-	<license>GPL</license>
-	<homepage>http://code.google.com/p/ibus</homepage>
-	<textdomain>ibus-plover</textdomain>
 
-	<engines>
-		<engine>
-			<name>plover</name>
-			<language>en</language>
-			<license>GPL</license>
-			<author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
-			<icon>/usr/share/ibus-plover/ibus-plover.png</icon>
-			<layout>us</layout>
-			<longname>Plover</longname>
-			<description>Plover Input Method</description>
-			<rank>0</rank>
-		</engine>
-	</engines>
+    <name>org.freedesktop.IBus.Plover</name>
+    <description>Plover Component</description>
+    <exec>/usr/share/ibus-plover/ibus-engine-plover --ibus</exec>
+    <version>0.2.1</version>
+    <author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
+    <license>GPL</license>
+    <homepage>http://code.google.com/p/ibus</homepage>
+    <textdomain>ibus-plover</textdomain>
+
+    <engines>
+	<engine>
+	    <name>plover</name>
+	    <language>en</language>
+	    <license>GPL</license>
+	    <author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
+	    <icon>/usr/share/ibus-plover/ibus-plover.png</icon>
+	    <layout>us</layout>
+	    <longname>Plover</longname>
+	    <description>Plover Input Method</description>
+	    <rank>0</rank>
+	</engine>
+    </engines>
 
 </component>
 <!--
