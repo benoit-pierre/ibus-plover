@@ -23,7 +23,7 @@ export GTK_IM_MODULE=ibus
 export QT_IM_MODULE=ibus
 export XMODIFIERS="@im=ibus"
 
-ibus-daemon --xim --replace --daemonize #--panel=disable
+ibus-daemon --xim --replace --daemonize
 
 exec python2 ./main.py "$@"
 
