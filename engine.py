@@ -2,7 +2,7 @@
 #
 # ibus-plover - Plover support for Input Bus
 #
-# Copyright (c) 2013 Benoit Pierre <benoit.pierre@gmail.com>
+# Copyright (c) 2013-2014 Benoit Pierre <benoit.pierre@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
