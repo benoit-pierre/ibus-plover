@@ -1,5 +1,4 @@
 #!/bin/sh
-# vim:set noet ts=4:
 #
 # ibus-plover - Plover support for Input Bus
 #
@@ -21,3 +20,4 @@
 
 exec python2 /usr/share/ibus-plover/main.py $@
 
+# vim: sw=4

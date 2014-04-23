@@ -1,4 +1,4 @@
-# vim:set et sts=4 sw=4 fileencoding=utf-8 :
+# vim: set fileencoding=utf-8 :
 #
 # ibus-plover - Plover support for Input Bus
 #
