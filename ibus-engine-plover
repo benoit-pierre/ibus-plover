@@ -18,6 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-exec python2 /usr/share/ibus-plover/main.py "$@"
+exec python2 "$(dirname "$0")/main.py" "$@"
 
 # vim: sw=4
