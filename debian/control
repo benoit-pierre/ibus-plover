@@ -1,0 +1,11 @@
+Source: ibus-plover
+Maintainer: Benoit Pierre <benoit.pierre@gmail.com>
+Section: utils
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9)
+
+Package: ibus-plover
+Architecture: any
+Depends: ${misc:Depends}, python-ibus (>=1.5), ibus (>=1.5), plover (>=2.5.8)
+Description: Plover support for Input Bus.
