@@ -4,7 +4,7 @@
     <name>org.freedesktop.IBus.Plover</name>
     <description>Plover Component</description>
     <exec>/usr/share/ibus-plover/ibus-engine-plover --ibus</exec>
-    <version>0.2.1</version>
+    <version>0.2.2</version>
     <author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
     <license>GPL</license>
     <homepage>http://code.google.com/p/ibus</homepage>
