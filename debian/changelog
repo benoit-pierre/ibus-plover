@@ -1,3 +1,10 @@
+ibus-plover (0.2.2-2) trusty; urgency=medium
+
+  * Lower IBus dependencies version
+    (for compatibility with Ubuntu Precise)
+
+ -- Benoit Pierre <benoit.pierre@gmail.com>  Sun, 27 Apr 2014 01:06:32 +0200
+
 ibus-plover (0.2.2) trusty; urgency=medium
 
   * Bump version number. 

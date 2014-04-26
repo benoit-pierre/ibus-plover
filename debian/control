@@ -7,5 +7,5 @@ Build-Depends: debhelper (>= 9)
 
 Package: ibus-plover
 Architecture: any
-Depends: ${misc:Depends}, python-ibus (>=1.5), ibus (>=1.5), plover (>=2.5.8)
+Depends: ${misc:Depends}, gir1.2-ibus-1.0 (>=1.4), ibus (>=1.4.1), plover (>=2.5.8)
 Description: Plover support for Input Bus.
