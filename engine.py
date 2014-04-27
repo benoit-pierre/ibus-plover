@@ -120,7 +120,7 @@ class Steno:
         self._translator.add_listener(self._formatter.format)
         self._translator.get_dictionary().set_dicts(self._dicts)
         self._translator.set_min_undo_length(NB_PREDIT_STROKES)
-        self.reset(full=True)
+        self.reset(full=True, output=False)
 
     def flush(self):
         self._output.flush()
@@ -132,7 +132,7 @@ class Steno:
         self._translator.translate(stroke)
         self._output.stroke_end()
 
-    def reset(self, full=False):
+    def reset(self, full=False, output=True):
         self._log.debug('reset steno state (full=%s)' % full)
         state = _State()
         state.tail = self._translator.get_state().last()
@@ -140,7 +140,8 @@ class Steno:
             state.tail = Translation([Stroke('*')], None)
             state.tail.formatting = [_Action(attach=True)]
         self._translator.set_state(state)
-        self._output.reset()
+        if output:
+            self._output.reset()
 
 
 class Output:
