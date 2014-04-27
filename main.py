@@ -28,35 +28,19 @@ import getopt
 import locale
 import logging
 
+from config import DATA_DIR
 from engine import EnginePlover
 
 class IMApp:
+
     def __init__(self, exec_by_ibus):
-        engine_name = "plover" if exec_by_ibus else "plover (debug)"
-        self.__component = \
-                IBus.Component.new("org.freedesktop.IBus.Plover",
-                                   "Plover Component",
-                                   "0.1.0",
-                                   "GPL",
-                                   "Benoit Pierre <benoit.pierre@gmail.com>",
-                                   "http://example.com",
-                                   "/usr/bin/exec",
-                                   "ibus-plover")
-        engine = IBus.EngineDesc.new("plover",
-                                     engine_name,
-                                     "English Plover",
-                                     "en",
-                                     "GPL",
-                                     "Benoit Pierre <benoit.pierre@gmail.com>",
-                                     "",
-                                     "us")
-        self.__component.add_engine(engine)
+        component = IBus.Component.new_from_file('%s/plover.xml' % DATA_DIR)
+        self.__component = component
         self.__mainloop = GLib.MainLoop()
         self.__bus = IBus.Bus()
         self.__bus.connect("disconnected", self.__bus_disconnected_cb)
         self.__factory = IBus.Factory.new(self.__bus.get_connection())
-        self.__factory.add_engine("plover",
-                GObject.type_from_name("EnginePlover"))
+        self.__factory.add_engine('plover', GObject.type_from_name("EnginePlover"))
         if exec_by_ibus:
             self.__bus.request_name("org.freedesktop.IBus.Plover", 0)
         else:
