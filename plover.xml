@@ -2,12 +2,12 @@
 <component>
 
     <name>org.freedesktop.IBus.Plover</name>
-    <description>Plover Component</description>
+    <description>Plover component.</description>
     <exec>/usr/share/ibus-plover/ibus-engine-plover --ibus</exec>
     <version>0.2.2</version>
     <author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
-    <license>GPL</license>
-    <homepage>http://code.google.com/p/ibus</homepage>
+    <license>GPL-2</license>
+    <homepage>https://github.com/benoit-pierre/ibus-plover</homepage>
     <textdomain>ibus-plover</textdomain>
 
     <engines>
@@ -18,8 +18,8 @@
 	    <author>Benoit Pierre &lt;benoit.pierre@gmail.com&gt;</author>
 	    <icon>/usr/share/ibus-plover/ibus-plover.png</icon>
 	    <layout>us</layout>
-	    <longname>Plover</longname>
-	    <description>Plover Input Method</description>
+	    <longname>Plover (English)</longname>
+	    <description>English input method for Plover, the Open Source Steno Program.</description>
 	    <rank>0</rank>
 	</engine>
     </engines>
