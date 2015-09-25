@@ -1,19 +1,19 @@
-#! /bin/zsh
+#! /bin/bash
 
 set -x
 
-unset options
+[ -r "$HOME/.makepkg.conf" ] && . "$HOME/.makepkg.conf"
 
-cd "$0"(:h) &&
+cd "$(dirname "$0")" &&
 . ./PKGBUILD &&
 pkgver="$(git describe --tags --match='[0-9]*' | sed -n '/^[0-9][.0-9a-z-]\+$/{s/-/./g;p;Q0};Q1')" &&
 src="src/$pkgname-$pkgver" &&
 rm -rf src pkg &&
 mkdir -p "$src" &&
-sed "s/^pkgver=.*\$/pkgver=$pkgver/" ./PKGBUILD >src/PKGBUILD &&
-(cd "$OLDPWD" && git ls-files -z | xargs -0 cp --parents --target-directory="$OLDPWD/$src") &&
-export PACKAGER="`git config user.name` <`git config user.email`>" &&
-makepkg --noextract --force -p src/PKGBUILD &&
-rm -rf src pkg &&
-sudo pacman -U --noconfirm "$pkgname-$pkgver-$pkgrel-any.pkg.tar.xz"
+sed "s/^pkgver=.*\$/pkgver=$pkgver/" PKGBUILD >PKGBUILD.tmp &&
+(cd "$OLDPWD" && git ls-files -z | xargs -0 cp -a --no-dereference --parents --target-directory="$OLDPWD/$src") &&
+export PACKAGER="${PACKAGER:-`git config user.name` <`git config user.email`>}" &&
+makepkg --noextract --force -p PKGBUILD.tmp &&
+rm -rf src pkg PKGBUILD.tmp &&
+sudo pacman -U --noconfirm "$pkgname-$pkgver-$pkgrel-any${PKGEXT:-.pkg.tar.xz}"
 
