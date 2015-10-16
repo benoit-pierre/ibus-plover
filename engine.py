@@ -29,66 +29,79 @@ import plover.config
 
 import logging
 
-KEYSTRING_TO_STENO_KEY_ALT = {
-    59: "S-",
-    60: "T-",
-    61: "P-",
-    62: "H-",
-    63: "*",
-    65: "*",
-    66: "-F",
-    67: "-P",
-    68: "-L",
-    87: "-T",
-    88: "-D",
-    2: "S-",
-    3: "K-",
-    4: "W-",
-    5: "R-",
-    6: "*",
-    8: "*",
-    9: "-R",
-    10: "-B",
-    11: "-G",
-    12: "-S",
-    13: "-Z",
-    18: "A-",
-    19: "O-",
-    22: "-E",
-    23: "-U",
+
+PSEUDOKEY_TO_KEYCODE = {
+    # Function bar.
+    'esc': 1,
+    'f1': 59,
+    'f2': 60,
+    'f3': 61,
+    'f4': 62,
+    'f5': 63,
+    'f6': 64,
+    'f7': 65,
+    'f8': 66,
+    'f9': 67,
+    'f10': 68,
+    'f11': 87,
+    'f12': 88,
+    # Number row.
+    "`": 41,
+    "1": 2,
+    "2": 3,
+    "3": 4,
+    "4": 5,
+    "5": 6,
+    "6": 7,
+    "7": 8,
+    "8": 9,
+    "9": 10,
+    "0": 11,
+    "-": 12,
+    "=": 13,
+    "\\": 43,
+    # Upper row.
+    "q": 16,
+    "w": 17,
+    "e": 18,
+    "r": 19,
+    "t": 20,
+    "y": 21,
+    "u": 22,
+    "i": 23,
+    "o": 24,
+    "p": 25,
+    "[": 26,
+    "]": 27,
+    # Home row.
+    "a": 30,
+    "s": 31,
+    "d": 32,
+    "f": 33,
+    "g": 34,
+    "h": 35,
+    "j": 36,
+    "k": 37,
+    "l": 38,
+    ";": 39,
+    "'": 40,
+    # Bottom row.
+    "z": 44,
+    "x": 45,
+    "c": 46,
+    "v": 47,
+    "b": 48,
+    "n": 49,
+    "m": 50,
+    ",": 51,
+    ".": 52,
+    "/": 53,
+    # Space bar.
+    " ": 57,
 }
 
-KEYSTRING_TO_STENO_KEY = {
-    16: "S-",
-    17: "T-",
-    18: "P-",
-    19: "H-",
-    20: "*",
-    21: "*",
-    22: "-F",
-    23: "-P",
-    24: "-L",
-    25: "-T",
-    26: "-D",
-    30: "S-",
-    31: "K-",
-    32: "W-",
-    33: "R-",
-    34: "*",
-    35: "*",
-    36: "-R",
-    37: "-B",
-    38: "-G",
-    39: "-S",
-    40: "-Z",
-    46: "A-",
-    47: "O-",
-    49: "-E",
-    50: "-U",
-}
-
+# FIXME: fill it in...
 KEYCOMBO_TO_KEYSTRING = {
-    'Return': '\n',
 }
 
 NB_PREDIT_STROKES = 10
@@ -113,6 +126,15 @@ class Steno:
         self._config = plover.config.Config()
         with open(plover.config.CONFIG_FILE) as f:
             self._config.load(f)
+        keymap = self._config.get_machine_specific_options('NKRO Keyboard')['keymap']
+        self._mapping = {}
+        for steno_key, key_names in keymap.get().items():
+            for key in key_names:
+                key = key.lower()
+                if not key in PSEUDOKEY_TO_KEYCODE:
+                    continue
+                keycode = PSEUDOKEY_TO_KEYCODE[key]
+                self._mapping[keycode] = steno_key
         self._dicts = DictionaryManager.load(self._config.get_dictionary_file_names())
         self._formatter = Formatter()
         self._formatter.set_output(self._output)
@@ -142,6 +164,9 @@ class Steno:
         self._translator.set_state(state)
         if output:
             self._output.reset()
+
+    def translate_keycode_to_steno(self, keycode):
+        return self._mapping.get(keycode, None)
 
 
 class Output:
@@ -256,7 +281,6 @@ class EnginePlover(IBus.Engine):
         self._support_surrounding_text = False
         self._immediate_mode = False
         self._preedit = None
-        self._use_alt_mapping = False
         self._show_strokes = False
 
     def do_process_key_event(self, keyval, keycode, state):
@@ -387,11 +411,7 @@ class EnginePlover(IBus.Engine):
                     self._steno.flush()
                     return False
 
-        if self._use_alt_mapping:
-            mapping = KEYSTRING_TO_STENO_KEY_ALT
-        else:
-            mapping = KEYSTRING_TO_STENO_KEY
-        steno_key = mapping.get(keycode, None)
+        steno_key = self._steno.translate_keycode_to_steno(keycode)
         if steno_key is None:
             if self._stroke_started() or self._has_preedit():
                 return True
