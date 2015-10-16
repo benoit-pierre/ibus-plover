@@ -18,7 +18,7 @@ Quick Start
 
 - install dependencies
 - install ibus-plover globally (use the PKGBUILD in archlinux, or the Makefile install rule): this need to be done so the engine is registered to IBus (plover.xml must be copied in /usr/share/ibus/component)
-- restart IBus: Plover should no be available in the English input methods list
+- restart IBus: Plover should now be available in the English input methods list
 - add Plover to the list of input methods: you will now be able to select it using the global shortcut or the systray menu
  
 N.B.: the dictionaries from Plover configuration will be used.
